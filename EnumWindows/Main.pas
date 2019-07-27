@@ -22,9 +22,18 @@ type
     IncludeFilterPanel: TFlowPanel;
     FilterLabel: TLabel;
     ExcludeFilterPanel: TFlowPanel;
+    EnumeratePanel: TPanel;
+    Panel1: TPanel;
+    AutoUpdateCheckBox: TCheckBox;
+    AutoUpdateTimer: TTimer;
     procedure EnumerateButtonClick(Sender: TObject);
     procedure FormResize(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure AutoUpdateTimerTimer(Sender: TObject);
+    procedure AutoUpdateCheckBoxClick(Sender: TObject);
+
+  private
+    WinList: TStrings;
 
   public
     procedure AutoSizeFilterPanels;
@@ -105,8 +114,9 @@ begin
   IncludeMask := GetCheckedMask(MainForm.IncludeFilterPanel);
 
   if (IncludeMask = 0) or HasStyle(IncludeMask) then
-    MainForm.MainListBox.Items.Add(
-      Format('Handle: %d; Rect: %s; Text: %s', [Window, GetWindowRect, GetWindowText]));
+    MainForm.WinList.AddObject(
+      Format('Handle: %d; Rect: %s; Text: %s', [Window, GetWindowRect, GetWindowText]),
+      TObject(Window));
 end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
@@ -148,19 +158,40 @@ begin
   AutoSizeFilterPanels;
 end;
 
+procedure TMainForm.AutoUpdateCheckBoxClick(Sender: TObject);
+begin
+  AutoUpdateTimer.Enabled := AutoUpdateCheckBox.Checked;
+end;
+
+procedure TMainForm.AutoUpdateTimerTimer(Sender: TObject);
+begin
+  EnumerateButton.Click;
+end;
+
 procedure TMainForm.EnumerateButtonClick(Sender: TObject);
 var
-  SL: TStrings;
+  SelHandle: TObject;
 begin
-  SL := MainListBox.Items;
-  SL.BeginUpdate;
+  WinList := TStringList.Create;
   try
-    SL.Clear;
     EnumWindows(@AddWindowToList, NativeInt(Self));
 
-    Caption := Format('Matched windows: %d', [SL.Count]);
+    if WinList.Equals(MainListBox.Items) then
+      Exit;
+
+    if MainListBox.ItemIndex >= 0 then
+      SelHandle := MainListBox.Items.Objects[MainListBox.ItemIndex]
+    else
+      SelHandle := nil;
+
+    MainListBox.Items.Assign(WinList);
+
+    if Assigned(SelHandle) then
+      MainListBox.ItemIndex := MainListBox.Items.IndexOfObject(SelHandle);
+
+    Caption := Format('Matched windows: %d', [WinList.Count]);
   finally
-    SL.EndUpdate;
+    FreeAndNil(WinList);
   end;
 end;
 
@@ -175,7 +206,7 @@ begin
   FilterLabel.Top := MainListBox.Top + MainListBox.Height + 5;
   ExcludeFilterPanel.Top := FilterLabel.Top + FilterLabel.Height + 5;
   IncludeFilterPanel.Top := ExcludeFilterPanel.Top + ExcludeFilterPanel.Height + 5;
-  EnumerateButton.Top := IncludeFilterPanel.Top + IncludeFilterPanel.Height + 5;
+  EnumeratePanel.Top := IncludeFilterPanel.Top + IncludeFilterPanel.Height + 5;
 end;
 
 procedure TMainForm.FormResize(Sender: TObject);
