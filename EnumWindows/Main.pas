@@ -12,16 +12,17 @@ uses
   Vcl.Controls,
   Vcl.Forms,
   Vcl.Dialogs,
-  Vcl.StdCtrls, Vcl.ExtCtrls;
+  Vcl.StdCtrls,
+  Vcl.ExtCtrls;
 
 type
   TMainForm = class(TForm)
     MainListBox: TListBox;
-    Button1: TButton;
+    EnumerateButton: TButton;
     IncludeFilterPanel: TFlowPanel;
-    Label1: TLabel;
+    FilterLabel: TLabel;
     ExcludeFilterPanel: TFlowPanel;
-    procedure Button1Click(Sender: TObject);
+    procedure EnumerateButtonClick(Sender: TObject);
     procedure FormResize(Sender: TObject);
     procedure FormCreate(Sender: TObject);
 
@@ -38,7 +39,7 @@ implementation
 
 function AddWindowToList(Window: THandle; Target: Pointer): Boolean; stdcall;
 var
-  SL: TStrings absolute Target;
+  MainForm: TMainForm absolute Target;
 
   function GetWindowText: string;
   var
@@ -104,12 +105,14 @@ begin
   IncludeMask := GetCheckedMask(MainForm.IncludeFilterPanel);
 
   if (IncludeMask = 0) or HasStyle(IncludeMask) then
-    SL.Add(Format('Handle: %d; Rect: %s; Text: %s', [Window, GetWindowRect, GetWindowText]));
+    MainForm.MainListBox.Items.Add(
+      Format('Handle: %d; Rect: %s; Text: %s', [Window, GetWindowRect, GetWindowText]));
 end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
 
-  procedure AddFilterCheckBox(ConstantName: string; Mask: NativeInt; CheckInclude: Boolean = False; CheckExclude: Boolean = False);
+  procedure AddFilterCheckBox(ConstantName: string; Mask: NativeInt;
+    CheckInclude: Boolean = False; CheckExclude: Boolean = False);
 
     function AddCheckBox(Parent: TWinControl; Tag: NativeInt): TCheckBox;
     begin
@@ -117,7 +120,8 @@ procedure TMainForm.FormCreate(Sender: TObject);
       Result.Parent := Parent;
       Result.Name := 'CB_' + Parent.Name + IntToStr(Parent.ControlCount);
       Result.Tag := Tag;
-      Result.SetBounds(0, 0, MulDiv(160, Screen.PixelsPerInch, PixelsPerInch), MulDiv(17, Screen.PixelsPerInch, PixelsPerInch));
+      Result.SetBounds(0, 0, MulDiv(165, Screen.PixelsPerInch, PixelsPerInch),
+        MulDiv(17, Screen.PixelsPerInch, PixelsPerInch));
     end;
 
   var
@@ -133,7 +137,6 @@ procedure TMainForm.FormCreate(Sender: TObject);
   end;
 
 begin
-
   AddFilterCheckBox('WS_CAPTION', WS_CAPTION);
   AddFilterCheckBox('WS_CHILD', WS_CHILD);
   AddFilterCheckBox('WS_DISABLED', WS_DISABLED, False, True);
@@ -145,16 +148,15 @@ begin
   AutoSizeFilterPanels;
 end;
 
-procedure TMainForm.Button1Click(Sender: TObject);
+procedure TMainForm.EnumerateButtonClick(Sender: TObject);
 var
   SL: TStrings;
 begin
-
   SL := MainListBox.Items;
   SL.BeginUpdate;
   try
     SL.Clear;
-    EnumWindows(@AddWindowToList, NativeInt(SL));
+    EnumWindows(@AddWindowToList, NativeInt(Self));
 
     Caption := Format('Matched windows: %d', [SL.Count]);
   finally
@@ -168,6 +170,12 @@ begin
   ExcludeFilterPanel.AutoSize := False;
   IncludeFilterPanel.AutoSize := True;
   IncludeFilterPanel.AutoSize := False;
+
+  // The bottom order can be jumbled after AutoSize, so we must correct it
+  FilterLabel.Top := MainListBox.Top + MainListBox.Height + 5;
+  ExcludeFilterPanel.Top := FilterLabel.Top + FilterLabel.Height + 5;
+  IncludeFilterPanel.Top := ExcludeFilterPanel.Top + ExcludeFilterPanel.Height + 5;
+  EnumerateButton.Top := IncludeFilterPanel.Top + IncludeFilterPanel.Height + 5;
 end;
 
 procedure TMainForm.FormResize(Sender: TObject);

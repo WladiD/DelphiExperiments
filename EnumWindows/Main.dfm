@@ -3,7 +3,7 @@ object MainForm: TMainForm
   Top = 0
   Caption = 'MainForm'
   ClientHeight = 535
-  ClientWidth = 503
+  ClientWidth = 543
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -16,46 +16,43 @@ object MainForm: TMainForm
   OnResize = FormResize
   PixelsPerInch = 96
   TextHeight = 13
-  object Label1: TLabel
+  object FilterLabel: TLabel
     AlignWithMargins = True
     Left = 3
     Top = 426
-    Width = 497
+    Width = 537
     Height = 13
     Align = alBottom
     Caption = 'Filter by window style'
-    ExplicitTop = 387
     ExplicitWidth = 104
   end
   object MainListBox: TListBox
     Left = 0
     Top = 0
-    Width = 503
+    Width = 543
     Height = 423
     Align = alClient
     ItemHeight = 13
     TabOrder = 0
-    ExplicitTop = -3
-    ExplicitWidth = 244
-    ExplicitHeight = 362
+    ExplicitWidth = 503
   end
-  object Button1: TButton
+  object EnumerateButton: TButton
     Left = 0
     Top = 496
-    Width = 503
+    Width = 543
     Height = 39
     Align = alBottom
     Caption = 'Enumerate windows'
     Default = True
     TabOrder = 1
-    OnClick = Button1Click
-    ExplicitWidth = 355
+    OnClick = EnumerateButtonClick
+    ExplicitWidth = 503
   end
   object IncludeFilterPanel: TFlowPanel
     AlignWithMargins = True
     Left = 10
     Top = 474
-    Width = 483
+    Width = 523
     Height = 17
     Margins.Left = 10
     Margins.Top = 5
@@ -65,14 +62,13 @@ object MainForm: TMainForm
     Alignment = taLeftJustify
     BevelOuter = bvNone
     TabOrder = 2
-    ExplicitTop = 386
-    ExplicitWidth = 426
+    ExplicitWidth = 483
   end
   object ExcludeFilterPanel: TFlowPanel
     AlignWithMargins = True
     Left = 10
     Top = 447
-    Width = 483
+    Width = 523
     Height = 17
     Margins.Left = 10
     Margins.Top = 5
@@ -82,8 +78,6 @@ object MainForm: TMainForm
     Alignment = taLeftJustify
     BevelOuter = bvNone
     TabOrder = 3
-    ExplicitLeft = 5
-    ExplicitTop = 431
-    ExplicitWidth = 426
+    ExplicitWidth = 483
   end
 end
