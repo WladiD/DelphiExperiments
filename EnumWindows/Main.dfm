@@ -19,31 +19,30 @@ object MainForm: TMainForm
   object FilterLabel: TLabel
     AlignWithMargins = True
     Left = 3
-    Top = 418
+    Top = 386
     Width = 537
     Height = 13
     Align = alBottom
     Caption = 'Filter by window style'
-    ExplicitTop = 426
+    ExplicitTop = 418
     ExplicitWidth = 104
   end
   object MainListBox: TListBox
     Left = 0
     Top = 0
     Width = 543
-    Height = 415
+    Height = 383
     Align = alClient
     DoubleBuffered = True
     ItemHeight = 13
     ParentDoubleBuffered = False
     TabOrder = 0
-    ExplicitWidth = 503
-    ExplicitHeight = 423
+    ExplicitHeight = 415
   end
   object IncludeFilterPanel: TFlowPanel
     AlignWithMargins = True
     Left = 10
-    Top = 466
+    Top = 434
     Width = 523
     Height = 17
     Margins.Left = 10
@@ -52,15 +51,15 @@ object MainForm: TMainForm
     Margins.Bottom = 5
     Align = alBottom
     Alignment = taLeftJustify
+    BevelEdges = [beBottom]
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitTop = 474
-    ExplicitWidth = 483
+    ExplicitTop = 466
   end
   object ExcludeFilterPanel: TFlowPanel
     AlignWithMargins = True
     Left = 10
-    Top = 439
+    Top = 407
     Width = 523
     Height = 17
     Margins.Left = 10
@@ -71,8 +70,7 @@ object MainForm: TMainForm
     Alignment = taLeftJustify
     BevelOuter = bvNone
     TabOrder = 2
-    ExplicitTop = 447
-    ExplicitWidth = 483
+    ExplicitTop = 439
   end
   object EnumeratePanel: TPanel
     Left = 0
@@ -94,10 +92,6 @@ object MainForm: TMainForm
       Default = True
       TabOrder = 0
       OnClick = EnumerateButtonClick
-      ExplicitLeft = 0
-      ExplicitTop = 449
-      ExplicitWidth = 543
-      ExplicitHeight = 39
     end
     object Panel1: TPanel
       Left = 0
@@ -118,11 +112,48 @@ object MainForm: TMainForm
       end
     end
   end
+  object OptionsPanel: TPanel
+    Left = 0
+    Top = 456
+    Width = 543
+    Height = 32
+    Align = alBottom
+    Alignment = taLeftJustify
+    BevelEdges = [beTop]
+    BevelKind = bkSoft
+    BevelOuter = bvNone
+    TabOrder = 4
+    object Label1: TLabel
+      Left = 3
+      Top = 8
+      Width = 76
+      Height = 13
+      Caption = 'Further Options'
+    end
+    object FilterOverlappedWindowsCheckBox: TCheckBox
+      Left = 113
+      Top = 6
+      Width = 152
+      Height = 17
+      Caption = 'Filter overlapped windows'
+      TabOrder = 0
+    end
+    object OnlyCurrendVDCheckBox: TCheckBox
+      Left = 271
+      Top = 6
+      Width = 202
+      Height = 17
+      Caption = 'Only current virtual desktop (Win 10)'
+      Checked = True
+      State = cbChecked
+      TabOrder = 1
+    end
+  end
   object AutoUpdateTimer: TTimer
     Enabled = False
     Interval = 100
     OnTimer = AutoUpdateTimerTimer
-    Left = 88
-    Top = 488
+    Left = 80
+    Top = 504
   end
 end

@@ -5,6 +5,7 @@ interface
 uses
   Winapi.Windows,
   Winapi.Messages,
+  Winapi.ActiveX,
   System.SysUtils,
   System.Variants,
   System.Classes,
@@ -13,9 +14,21 @@ uses
   Vcl.Forms,
   Vcl.Dialogs,
   Vcl.StdCtrls,
-  Vcl.ExtCtrls;
+  Vcl.ExtCtrls,
+  Vcl.Menus;
+
+const
+  CLSID_VirtualDesktopManager: TGUID = '{AA509086-5CA9-4C25-8F95-589D3C07B48A}';
+  IID_VirtualDesktopManager: TGUID = '{A5CD92FF-29BE-454C-8D04-D82879FB3F1B}';
 
 type
+  IVirtualDesktopManager = interface(IUnknown)
+    ['{A5CD92FF-29BE-454C-8D04-D82879FB3F1B}']
+    function IsWindowOnCurrentVirtualDesktop(Wnd: HWND; pIsTrue: PBOOL): HResult; stdcall;
+    function GetWindowDesktopId(Wnd: HWND; pDesktopID: PGUID): HResult; stdcall;
+    function MoveWindowToDesktop(Wnd: HWND; const DesktopID: TGUID): HResult; stdcall;
+  end;
+
   TMainForm = class(TForm)
     MainListBox: TListBox;
     EnumerateButton: TButton;
@@ -26,6 +39,10 @@ type
     Panel1: TPanel;
     AutoUpdateCheckBox: TCheckBox;
     AutoUpdateTimer: TTimer;
+    OptionsPanel: TPanel;
+    FilterOverlappedWindowsCheckBox: TCheckBox;
+    OnlyCurrendVDCheckBox: TCheckBox;
+    Label1: TLabel;
     procedure EnumerateButtonClick(Sender: TObject);
     procedure FormResize(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -33,10 +50,12 @@ type
     procedure AutoUpdateCheckBoxClick(Sender: TObject);
 
   private
-    WinList: TStrings;
+    FWinList: TStrings;
+    FVirtualDesktopAvailable: Boolean;
+    FVirtualDesktopManager: IVirtualDesktopManager;
 
-  public
     procedure AutoSizeFilterPanels;
+    procedure FilterHiddenWindows(List: TStrings);
   end;
 
 var
@@ -49,6 +68,9 @@ implementation
 function AddWindowToList(Window: THandle; Target: Pointer): Boolean; stdcall;
 var
   MainForm: TMainForm absolute Target;
+  WindowStyle: NativeInt;
+  IncludeMask, ExcludeMask: NativeInt;
+  WindowMatch, WinOnCurrentDesktop: Boolean;
 
   function GetWindowText: string;
   var
@@ -77,9 +99,6 @@ var
     end;
   end;
 
-var
-  WindowStyle: NativeInt;
-
   function HasStyle(CheckMask: FixedUInt): Boolean;
   begin
     Result := (WindowStyle and CheckMask) = CheckMask;
@@ -100,8 +119,6 @@ var
     end;
   end;
 
-var
-  IncludeMask, ExcludeMask: NativeInt;
 begin
   Result := True;
   WindowStyle := GetWindowLong(Window, GWL_STYLE);
@@ -112,16 +129,24 @@ begin
     Exit;
 
   IncludeMask := GetCheckedMask(MainForm.IncludeFilterPanel);
+  WindowMatch := (IncludeMask = 0) or HasStyle(IncludeMask);
 
-  if (IncludeMask = 0) or HasStyle(IncludeMask) then
-    MainForm.WinList.AddObject(
+  if WindowMatch then
+  begin
+    if MainForm.FVirtualDesktopAvailable and MainForm.OnlyCurrendVDCheckBox.Checked and
+      Succeeded(MainForm.FVirtualDesktopManager.IsWindowOnCurrentVirtualDesktop(Window, @WinOnCurrentDesktop)) and
+      not WinOnCurrentDesktop then
+      Exit;
+
+    MainForm.FWinList.AddObject(
       Format('Handle: %d; Rect: %s; Text: %s', [Window, GetWindowRect, GetWindowText]),
       TObject(Window));
+  end;
 end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
 
-  procedure AddFilterCheckBox(ConstantName: string; Mask: NativeInt;
+  procedure AddFilterCheckBox(ConstantName: string; Mask: NativeUInt;
     CheckInclude: Boolean = False; CheckExclude: Boolean = False);
 
     function AddCheckBox(Parent: TWinControl; Tag: NativeInt): TCheckBox;
@@ -147,15 +172,20 @@ procedure TMainForm.FormCreate(Sender: TObject);
   end;
 
 begin
-  AddFilterCheckBox('WS_CAPTION', WS_CAPTION);
+  AddFilterCheckBox('WS_CAPTION', WS_CAPTION, True);
   AddFilterCheckBox('WS_CHILD', WS_CHILD);
   AddFilterCheckBox('WS_DISABLED', WS_DISABLED, False, True);
   AddFilterCheckBox('WS_POPUP', WS_POPUP);
-  AddFilterCheckBox('WS_SYSMENU', WS_SYSMENU, True);
+  AddFilterCheckBox('WS_SYSMENU', WS_SYSMENU);
   AddFilterCheckBox('WS_TILEDWINDOW', WS_TILEDWINDOW);
   AddFilterCheckBox('WS_VISIBLE', WS_VISIBLE, True);
 
   AutoSizeFilterPanels;
+
+  FVirtualDesktopAvailable := TOSVersion.Check(6, 3) and // Windows 10
+    Succeeded(CoCreateInstance(CLSID_VirtualDesktopManager, nil, CLSCTX_INPROC_SERVER, IID_VirtualDesktopManager, FVirtualDesktopManager));
+
+  AutoUpdateCheckBox.Checked := True;
 end;
 
 procedure TMainForm.AutoUpdateCheckBoxClick(Sender: TObject);
@@ -168,30 +198,62 @@ begin
   EnumerateButton.Click;
 end;
 
+procedure TMainForm.FilterHiddenWindows(List: TStrings);
+
+  function IsWindowHidden(Index: Integer): Boolean;
+  var
+    cc: Integer;
+    RefRect, TestRect: TRect;
+  begin
+    Result := False;
+
+    if (Index = 0) or (not Winapi.Windows.GetWindowRect(HWND(List.Objects[Index]), RefRect)) then
+      Exit;
+
+    if RefRect.IsEmpty then
+      Exit(True);
+
+    for cc := Index - 1 downto 0 do
+      if Winapi.Windows.GetWindowRect(HWND(List.Objects[cc]), TestRect) and
+        not TestRect.IsEmpty and TestRect.Contains(RefRect) then
+        Exit(True);
+  end;
+
+var
+  cc: Integer;
+begin
+  for cc := List.Count - 1 downto 0 do
+    if IsWindowHidden(cc) then
+      List.Delete(cc);
+end;
+
 procedure TMainForm.EnumerateButtonClick(Sender: TObject);
 var
   SelHandle: TObject;
 begin
-  WinList := TStringList.Create;
+  FWinList := TStringList.Create;
   try
     EnumWindows(@AddWindowToList, NativeInt(Self));
-
-    if WinList.Equals(MainListBox.Items) then
-      Exit;
 
     if MainListBox.ItemIndex >= 0 then
       SelHandle := MainListBox.Items.Objects[MainListBox.ItemIndex]
     else
       SelHandle := nil;
 
-    MainListBox.Items.Assign(WinList);
+    if FilterOverlappedWindowsCheckBox.Checked then
+      FilterHiddenWindows(FWinList);
+
+    if FWinList.Equals(MainListBox.Items) then
+      Exit;
+
+    MainListBox.Items.Assign(FWinList);
 
     if Assigned(SelHandle) then
       MainListBox.ItemIndex := MainListBox.Items.IndexOfObject(SelHandle);
 
-    Caption := Format('Matched windows: %d', [WinList.Count]);
+    Caption := Format('Matched windows: %d', [FWinList.Count]);
   finally
-    FreeAndNil(WinList);
+    FreeAndNil(FWinList);
   end;
 end;
 
@@ -206,7 +268,8 @@ begin
   FilterLabel.Top := MainListBox.Top + MainListBox.Height + 5;
   ExcludeFilterPanel.Top := FilterLabel.Top + FilterLabel.Height + 5;
   IncludeFilterPanel.Top := ExcludeFilterPanel.Top + ExcludeFilterPanel.Height + 5;
-  EnumeratePanel.Top := IncludeFilterPanel.Top + IncludeFilterPanel.Height + 5;
+  OptionsPanel.Top := IncludeFilterPanel.Top + IncludeFilterPanel.Height + 5;
+  EnumeratePanel.Top := OptionsPanel.Top + OptionsPanel.Height + 5;
 end;
 
 procedure TMainForm.FormResize(Sender: TObject);
