@@ -200,30 +200,50 @@ end;
 
 procedure TMainForm.FilterHiddenWindows(List: TStrings);
 
-  function IsWindowHidden(Index: Integer): Boolean;
+  function IsWindowEffectiveVisible(Index: Integer): Boolean;
   var
     cc: Integer;
+    RefHandle, TestHandle: HWND;
     RefRect, TestRect: TRect;
+    RefRegion, TestRegion: HRGN;
+    CombineResult: Integer;
   begin
     Result := False;
+    RefHandle := HWND(List.Objects[Index]);
 
-    if (Index = 0) or (not Winapi.Windows.GetWindowRect(HWND(List.Objects[Index]), RefRect)) then
+    if not Winapi.Windows.GetWindowRect(RefHandle, RefRect) and RefRect.IsEmpty then
       Exit;
 
-    if RefRect.IsEmpty then
-      Exit(True);
+    RefRegion := CreateRectRgnIndirect(RefRect);
+    try
+      for cc := Index - 1 downto 0 do
+      begin
+        TestHandle := HWND(List.Objects[cc]);
+        if not IsIconic(TestHandle) and Winapi.Windows.GetWindowRect(TestHandle, TestRect) and
+          not TestRect.IsEmpty then
+        begin
+          TestRegion := CreateRectRgnIndirect(TestRect);
+          try
+            CombineResult := CombineRgn(RefRegion, RefRegion, TestRegion, RGN_DIFF);
+            if CombineResult = NULLREGION then
+              Exit;
+          finally
+            DeleteObject(TestRegion);
+          end;
+        end;
+      end;
+    finally
+      DeleteObject(RefRegion);
+    end;
 
-    for cc := Index - 1 downto 0 do
-      if Winapi.Windows.GetWindowRect(HWND(List.Objects[cc]), TestRect) and
-        not TestRect.IsEmpty and TestRect.Contains(RefRect) then
-        Exit(True);
+    Result := True;
   end;
 
 var
   cc: Integer;
 begin
-  for cc := List.Count - 1 downto 0 do
-    if IsWindowHidden(cc) then
+  for cc := List.Count - 1 downto 1 do
+    if not IsWindowEffectiveVisible(cc) then
       List.Delete(cc);
 end;
 

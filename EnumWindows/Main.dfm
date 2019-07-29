@@ -24,7 +24,6 @@ object MainForm: TMainForm
     Height = 13
     Align = alBottom
     Caption = 'Filter by window style'
-    ExplicitTop = 418
     ExplicitWidth = 104
   end
   object MainListBox: TListBox
@@ -37,7 +36,6 @@ object MainForm: TMainForm
     ItemHeight = 13
     ParentDoubleBuffered = False
     TabOrder = 0
-    ExplicitHeight = 415
   end
   object IncludeFilterPanel: TFlowPanel
     AlignWithMargins = True
@@ -54,7 +52,6 @@ object MainForm: TMainForm
     BevelEdges = [beBottom]
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitTop = 466
   end
   object ExcludeFilterPanel: TFlowPanel
     AlignWithMargins = True
@@ -70,7 +67,6 @@ object MainForm: TMainForm
     Alignment = taLeftJustify
     BevelOuter = bvNone
     TabOrder = 2
-    ExplicitTop = 439
   end
   object EnumeratePanel: TPanel
     Left = 0
